@@ -189,6 +189,8 @@
 #include "sql/uniques.h"  // Unique
 #include "template_utils.h"
 
+#include "item_geofunc.h"
+
 using std::max;
 using std::min;
 
@@ -594,6 +596,8 @@ static SEL_TREE *get_mm_parts(RANGE_OPT_PARAM *param, Item_func *cond_func,
 static SEL_ROOT *get_mm_leaf(RANGE_OPT_PARAM *param, Item *cond_func,
                              Field *field, KEY_PART *key_part,
                              Item_func::Functype type, Item *value);
+static SEL_TREE *get_func_mm_tree_from_z_contains(RANGE_OPT_PARAM *param,
+                                                  Item_func *cond_func);
 static bool is_key_scan_ror(PARAM *param, uint keynr, uint nparts);
 static ha_rows check_quick_select(PARAM *param, uint idx, bool index_only,
                                   SEL_ROOT *tree, bool update_tbl_stats,
@@ -5798,6 +5802,11 @@ static SEL_TREE *get_func_mm_tree(RANGE_OPT_PARAM *param, Item *predicand,
       tree = get_func_mm_tree_from_json_overlaps_contains(param, predicand,
                                                           cond_func);
     } break;
+    case Item_func::Z_CONTAINS_FUNC:
+      tree = get_func_mm_tree_from_z_contains(param, cond_func);
+      break;
+    // case Item_func::Z_WITHIN_FUNC:
+    //   break;
     default:
       if (predicand->type() == Item::FIELD_ITEM) {
         Field *field = static_cast<Item_field *>(predicand)->field;
@@ -6213,6 +6222,10 @@ static bool is_spatial_operator(Item_func::Functype op_type) {
 bool comparable_in_index(Item *cond_func, const Field *field,
                          const Field::imagetype itype,
                          Item_func::Functype comp_type, const Item *value) {
+  // Assume OK
+  if (((Item_func *)cond_func)->functype() == Item_func::Z_CONTAINS_FUNC)
+    return true;
+
   /*
     Usually an index cannot be used if the column collation differs
     from the operation collation. However, a case insensitive index
@@ -10045,10 +10058,9 @@ uint quick_range_seq_next(range_seq_t rseq, KEY_MULTI_RANGE *range) {
   start_key->key = cur->min_key;
   start_key->length = cur->min_length;
   start_key->keypart_map = cur->min_keypart_map;
-  start_key->flag =
-      ((cur->flag & NEAR_MIN)
-           ? HA_READ_AFTER_KEY
-           : (cur->flag & EQ_RANGE) ? HA_READ_KEY_EXACT : HA_READ_KEY_OR_NEXT);
+  start_key->flag = ((cur->flag & NEAR_MIN)   ? HA_READ_AFTER_KEY
+                     : (cur->flag & EQ_RANGE) ? HA_READ_KEY_EXACT
+                                              : HA_READ_KEY_OR_NEXT);
   end_key->key = cur->max_key;
   end_key->length = cur->max_length;
   end_key->keypart_map = cur->max_keypart_map;
@@ -13013,11 +13025,10 @@ static ha_rkey_function get_search_mode(QUICK_RANGE *cur_range, bool is_asc,
       if (cur_range->flag & NO_MIN_RANGE)
         return HA_READ_PREFIX_LAST;  // 4
       else
-        return (cur_range->flag & EQ_RANGE)
-                   ? HA_READ_KEY_EXACT  // 5
-                   : (cur_range->flag & NEAR_MIN)
-                         ? HA_READ_BEFORE_KEY            // 6
-                         : HA_READ_PREFIX_LAST_OR_PREV;  // 7
+        return (cur_range->flag & EQ_RANGE) ? HA_READ_KEY_EXACT  // 5
+               : (cur_range->flag & NEAR_MIN)
+                   ? HA_READ_BEFORE_KEY            // 6
+                   : HA_READ_PREFIX_LAST_OR_PREV;  // 7
     }
   }
 
@@ -13026,19 +13037,17 @@ static ha_rkey_function get_search_mode(QUICK_RANGE *cur_range, bool is_asc,
     if (cur_range->flag & NO_MAX_RANGE)
       return HA_READ_PREFIX_LAST;  // 8
     else
-      return (cur_range->flag & EQ_RANGE)
-                 ? HA_READ_KEY_EXACT  // 9
-                 : (cur_range->flag & NEAR_MAX)
-                       ? HA_READ_BEFORE_KEY            // 10
-                       : HA_READ_PREFIX_LAST_OR_PREV;  // 11
-  } else {  // key parts is descending
+      return (cur_range->flag & EQ_RANGE) ? HA_READ_KEY_EXACT  // 9
+             : (cur_range->flag & NEAR_MAX)
+                 ? HA_READ_BEFORE_KEY            // 10
+                 : HA_READ_PREFIX_LAST_OR_PREV;  // 11
+  } else {                                       // key parts is descending
     if (cur_range->flag & NO_MAX_RANGE)
       return HA_READ_KEY_EXACT;  // 12a
     else
-      return (cur_range->flag & EQ_RANGE)
-                 ? HA_READ_KEY_EXACT                                    // 12b
-                 : (cur_range->flag & NEAR_MAX) ? HA_READ_AFTER_KEY     // 13
-                                                : HA_READ_KEY_OR_NEXT;  // 14
+      return (cur_range->flag & EQ_RANGE)   ? HA_READ_KEY_EXACT     // 12b
+             : (cur_range->flag & NEAR_MAX) ? HA_READ_AFTER_KEY     // 13
+                                            : HA_READ_KEY_OR_NEXT;  // 14
   }
 }
 
@@ -14275,9 +14284,8 @@ int QUICK_SKIP_SCAN_SELECT::get_next() {
         start_key.keypart_map = make_prev_keypart_map(used_key_parts);
         start_key.flag = (range_cond_flag & (EQ_RANGE | NULL_RANGE))
                              ? HA_READ_KEY_EXACT
-                             : (range_cond_flag & NEAR_MIN)
-                                   ? HA_READ_AFTER_KEY
-                                   : HA_READ_KEY_OR_NEXT;
+                         : (range_cond_flag & NEAR_MIN) ? HA_READ_AFTER_KEY
+                                                        : HA_READ_KEY_OR_NEXT;
       } else {
         // If there is no minimum key, just use the distinct prefix.
         start_key.key = distinct_prefix;
@@ -15031,6 +15039,41 @@ void QUICK_SKIP_SCAN_SELECT::dbug_dump(int indent, bool verbose) {
       fprintf(DBUG_FILE, "Range: %s\n", range_result.c_ptr());
     }
   }
+}
+
+static SEL_TREE *get_func_mm_tree_from_z_contains(RANGE_OPT_PARAM *param,
+                                                  Item_func *cond_func) {
+  // Decompose query geometry into set of cells (z-values)
+  std::vector<uint32_t> ranges;
+  Item_func_z_contains *tmp = (Item_func_z_contains *)cond_func;
+  if (tmp->decompose_containing_geom(&ranges)) return nullptr;
+
+  // Find the field of the z column to pass into get_mm_parts
+  Field *field = nullptr;
+  KEY_PART *key_part = param->key_parts;
+  KEY_PART *end = param->key_parts_end;
+  for (; key_part != end; key_part++) {
+    if (strcmp(key_part->field->field_name, "z") == 0) {
+      field = key_part->field;
+    }
+  }
+  if (!field) return nullptr;
+
+  // Make the ranges (between) and add them to the final tree (tree)
+  SEL_TREE *lower_bound = nullptr;
+  SEL_TREE *upper_bound = nullptr;
+  SEL_TREE *between = nullptr;
+  SEL_TREE *tree = &null_sel_tree;
+  for (uint i = 0; i < ranges.size(); i += 2) {
+    Item *lb = new Item_int(ranges[i]);
+    Item *ub = new Item_int(ranges[i + 1]);
+    lower_bound = get_mm_parts(param, cond_func, field, Item_func::GE_FUNC, lb);
+    upper_bound = get_mm_parts(param, cond_func, field, Item_func::LE_FUNC, ub);
+    between = tree_and(param, lower_bound, upper_bound);
+    tree = tree_or(param, tree, between);
+  }
+
+  return tree;
 }
 
 #endif /* !NDEBUG */

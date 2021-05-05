@@ -1596,6 +1596,8 @@ static const std::pair<const char *, Create_func *> func_array[] = {
     {"ST_WITHIN", SQL_FN(Item_func_st_within, 2)},
     {"ST_X", SQL_FACTORY(X_instantiator)},
     {"ST_Y", SQL_FACTORY(Y_instantiator)},
+    {"Z_CONTAINS", SQL_FN(Item_func_z_contains, 2)},
+    {"Z_WITHIN", SQL_FN(Item_func_z_within, 2)},
     {"SUBSTRING_INDEX", SQL_FN(Item_func_substr_index, 3)},
     {"SUBTIME", SQL_FACTORY(Subtime_instantiator)},
     {"TAN", SQL_FN(Item_func_tan, 1)},
@@ -2163,9 +2165,9 @@ Item *create_temporal_literal(THD *thd, const char *str, size_t length,
   if (item) return item;
 
   if (send_error) {
-    const char *typestr = (type == MYSQL_TYPE_DATE)
-                              ? "DATE"
-                              : (type == MYSQL_TYPE_TIME) ? "TIME" : "DATETIME";
+    const char *typestr = (type == MYSQL_TYPE_DATE)   ? "DATE"
+                          : (type == MYSQL_TYPE_TIME) ? "TIME"
+                                                      : "DATETIME";
     ErrConvString err(str, length, thd->variables.character_set_client);
     my_error(ER_WRONG_VALUE, MYF(0), typestr, err.ptr());
   }

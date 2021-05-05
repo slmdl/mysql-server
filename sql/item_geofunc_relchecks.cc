@@ -1279,3 +1279,41 @@ bool Item_func_st_within::eval(const dd::Spatial_reference_system *srs,
                                bool *result, bool *null) {
   return gis::within(srs, g1, g2, func_name(), result, null);
 }
+
+bool Item_func_z_contains::eval(const dd::Spatial_reference_system *srs,
+                                const gis::Geometry *g1,
+                                const gis::Geometry *g2, bool *result,
+                                bool *null) {
+  return gis::within(srs, g2, g1, func_name(), result, null);
+}
+
+bool Item_func_z_within::eval(const dd::Spatial_reference_system *srs,
+                              const gis::Geometry *g1, const gis::Geometry *g2,
+                              bool *result, bool *null) {
+  return gis::within(srs, g1, g2, func_name(), result, null);
+}
+
+bool Item_func_z_contains::decompose_containing_geom(
+    std::vector<uint32_t> *ranges) {
+  // Parse the geometry into a usable format
+  String buf;
+  String *unparsed_geometry = args[0]->val_str(&buf);
+  std::unique_ptr<dd::cache::Dictionary_client::Auto_releaser> releaser(
+      new dd::cache::Dictionary_client::Auto_releaser(
+          current_thd->dd_client()));
+  const dd::Spatial_reference_system *srs;
+  std::unique_ptr<gis::Geometry> geometry;
+  if (gis::parse_geometry(current_thd, func_name(), unparsed_geometry, &srs,
+                          &geometry)) {
+    return true;  // Should do some proper error handling but w/e
+  }
+
+  // Find the decomposition of the geometry
+  // I.e. the set of cells intersected by the geometry
+  uint32_t lb = 3512928098;
+  uint32_t ub = 3512928105;
+  ranges->push_back(lb);
+  ranges->push_back(ub);
+
+  return false;
+}

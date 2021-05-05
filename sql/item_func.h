@@ -209,6 +209,8 @@ class Item_func : public Item_result_field {
     SP_POINTN,
     SP_GEOMETRYN,
     SP_INTERIORRINGN,
+    Z_WITHIN_FUNC,
+    Z_CONTAINS_FUNC,
     NOT_FUNC,
     NOT_ALL_FUNC,
     NOW_FUNC,

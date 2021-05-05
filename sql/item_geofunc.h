@@ -1263,6 +1263,29 @@ class Item_func_st_within final : public Item_func_spatial_relation {
             const gis::Geometry *g2, bool *result, bool *null) override;
 };
 
+class Item_func_z_contains final : public Item_func_spatial_relation {
+ public:
+  Item_func_z_contains(const POS &pos, Item *a, Item *b)
+      : Item_func_spatial_relation(pos, a, b) {}
+  enum Functype functype() const override { return Z_CONTAINS_FUNC; }
+  enum Functype rev_functype() const override { return Z_WITHIN_FUNC; }
+  const char *func_name() const override { return "z_contains"; }
+  bool eval(const dd::Spatial_reference_system *srs, const gis::Geometry *g1,
+            const gis::Geometry *g2, bool *result, bool *null) override;
+  bool decompose_containing_geom(std::vector<uint32_t> *ranges);
+};
+
+class Item_func_z_within final : public Item_func_spatial_relation {
+ public:
+  Item_func_z_within(const POS &pos, Item *a, Item *b)
+      : Item_func_spatial_relation(pos, a, b) {}
+  enum Functype functype() const override { return Z_WITHIN_FUNC; }
+  enum Functype rev_functype() const override { return Z_CONTAINS_FUNC; }
+  const char *func_name() const override { return "z_within"; }
+  bool eval(const dd::Spatial_reference_system *srs, const gis::Geometry *g1,
+            const gis::Geometry *g2, bool *result, bool *null) override;
+};
+
 /**
   Spatial operations
 */

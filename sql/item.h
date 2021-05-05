@@ -4645,6 +4645,13 @@ class Item_int : public Item_num {
     max_length = length;
     fixed = true;
   }
+  Item_int(uint32 i, uint length = MY_INT32_NUM_DECIMAL_DIGITS)
+    : value((longlong)i) {
+  set_data_type(MYSQL_TYPE_LONGLONG);
+  max_length = length;
+  fixed = true;
+  unsigned_flag = true;
+  }
   Item_int(const POS &pos, int32 i, uint length = MY_INT32_NUM_DECIMAL_DIGITS)
       : super(pos), value((longlong)i) {
     set_data_type(MYSQL_TYPE_LONGLONG);
