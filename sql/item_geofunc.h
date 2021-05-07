@@ -1036,6 +1036,8 @@ class Item_func_spatial_relation : public Item_bool_func2 {
  public:
   Item_func_spatial_relation(const POS &pos, Item *a, Item *b)
       : Item_bool_func2(pos, a, b) {}
+  Item_func_spatial_relation(const POS &pos, Item *a, Item *b, Item *c)
+      : Item_bool_func2(pos, a, b, c) {}
   bool resolve_type(THD *thd) override {
     if (param_type_is_default(thd, 0, -1, MYSQL_TYPE_GEOMETRY)) return true;
     // Spatial relation functions may return NULL if either parameter is NULL or
@@ -1265,25 +1267,13 @@ class Item_func_st_within final : public Item_func_spatial_relation {
 
 class Item_func_z_contains final : public Item_func_spatial_relation {
  public:
-  Item_func_z_contains(const POS &pos, Item *a, Item *b)
-      : Item_func_spatial_relation(pos, a, b) {}
+  Item_func_z_contains(const POS &pos, Item *g1, Item *g2, Item *z_col)
+      : Item_func_spatial_relation(pos, g1, g2, z_col) {}
   enum Functype functype() const override { return Z_CONTAINS_FUNC; }
-  enum Functype rev_functype() const override { return Z_WITHIN_FUNC; }
   const char *func_name() const override { return "z_contains"; }
   bool eval(const dd::Spatial_reference_system *srs, const gis::Geometry *g1,
             const gis::Geometry *g2, bool *result, bool *null) override;
   bool decompose_containing_geom(std::vector<uint32_t> *ranges);
-};
-
-class Item_func_z_within final : public Item_func_spatial_relation {
- public:
-  Item_func_z_within(const POS &pos, Item *a, Item *b)
-      : Item_func_spatial_relation(pos, a, b) {}
-  enum Functype functype() const override { return Z_WITHIN_FUNC; }
-  enum Functype rev_functype() const override { return Z_CONTAINS_FUNC; }
-  const char *func_name() const override { return "z_within"; }
-  bool eval(const dd::Spatial_reference_system *srs, const gis::Geometry *g1,
-            const gis::Geometry *g2, bool *result, bool *null) override;
 };
 
 /**

@@ -6747,7 +6747,6 @@ static bool add_key_field(THD *thd, Key_field **key_fields, uint and_level,
          cond->functype() == Item_func::SP_OVERLAPS_FUNC ||
          cond->functype() == Item_func::SP_TOUCHES_FUNC ||
          cond->functype() == Item_func::SP_CROSSES_FUNC ||
-         cond->functype() == Item_func::Z_WITHIN_FUNC ||
          cond->functype() == Item_func::Z_CONTAINS_FUNC);
 
   Field *const field = item_field->field;

@@ -5802,11 +5802,6 @@ static SEL_TREE *get_func_mm_tree(RANGE_OPT_PARAM *param, Item *predicand,
       tree = get_func_mm_tree_from_json_overlaps_contains(param, predicand,
                                                           cond_func);
     } break;
-    case Item_func::Z_CONTAINS_FUNC:
-      tree = get_func_mm_tree_from_z_contains(param, cond_func);
-      break;
-    // case Item_func::Z_WITHIN_FUNC:
-    //   break;
     default:
       if (predicand->type() == Item::FIELD_ITEM) {
         Field *field = static_cast<Item_field *>(predicand)->field;
@@ -6141,6 +6136,11 @@ SEL_TREE *get_mm_tree(RANGE_OPT_PARAM *param, Item *cond) {
       dbug_print_tree("tree_returned", ftree, param);
       return ftree;
     }  // end case Item_func::MULT_EQUAL_FUNC
+
+    case Item_func::Z_CONTAINS_FUNC: {
+      ftree = get_func_mm_tree_from_z_contains(param, cond_func);
+      break;
+    }
 
     default: {
       Item *const arg_left = cond_func->arguments()[0];
@@ -15049,17 +15049,10 @@ static SEL_TREE *get_func_mm_tree_from_z_contains(RANGE_OPT_PARAM *param,
   if (tmp->decompose_containing_geom(&ranges)) return nullptr;
 
   // Find the field of the z column to pass into get_mm_parts
-  Field *field = nullptr;
-  KEY_PART *key_part = param->key_parts;
-  KEY_PART *end = param->key_parts_end;
-  for (; key_part != end; key_part++) {
-    if (strcmp(key_part->field->field_name, "z") == 0) {
-      field = key_part->field;
-    }
-  }
-  if (!field) return nullptr;
+  Item *z_column = tmp->get_arg(2);
+  Field *field = static_cast<Item_field *>(z_column)->field;
 
-  // Make the ranges (between) and add them to the final tree (tree)
+  // Make the ranges ('between') and add them to the final tree ('tree')
   SEL_TREE *lower_bound = nullptr;
   SEL_TREE *upper_bound = nullptr;
   SEL_TREE *between = nullptr;
