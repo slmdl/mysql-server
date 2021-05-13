@@ -7312,10 +7312,18 @@ bool add_key_fields(THD *thd, JOIN *join, Key_field **key_fields,
         }
       }
       if (is_local_field(cond_func->arguments()[1]) &&
-          cond_func->functype() != Item_func::LIKE_FUNC) {
+          cond_func->functype() != Item_func::LIKE_FUNC &&
+          cond_func->functype() != Item_func::Z_CONTAINS_FUNC) {
         if (add_key_equal_fields(
                 thd, key_fields, *and_level, cond_func,
                 (Item_field *)(cond_func->arguments()[1])->real_item(),
+                equal_func, cond_func->arguments(), 1, usable_tables,
+                sargables))
+          return true;
+      } else if (cond_func->functype() == Item_func::Z_CONTAINS_FUNC) {
+        if (add_key_equal_fields(
+                thd, key_fields, *and_level, cond_func,
+                (Item_field *)(cond_func->arguments()[2])->real_item(),
                 equal_func, cond_func->arguments(), 1, usable_tables,
                 sargables))
           return true;
