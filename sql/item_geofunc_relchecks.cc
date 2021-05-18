@@ -57,6 +57,8 @@
 #include "sql/srs_fetcher.h"
 #include "sql_string.h"
 
+#include "sql/gis/z_utils.h"
+
 namespace boost {
 namespace geometry {
 namespace cs {
@@ -1288,7 +1290,7 @@ bool Item_func_z_contains::eval(const dd::Spatial_reference_system *srs,
 }
 
 bool Item_func_z_contains::decompose_containing_geom(
-    std::vector<uint32_t> *ranges) {
+    std::vector<uint_fast32_t> &ranges) {
   // Parse the geometry into a usable format
   String buf;
   String *unparsed_geometry = args[0]->val_str(&buf);
@@ -1302,12 +1304,15 @@ bool Item_func_z_contains::decompose_containing_geom(
     return true;  // Should do some proper error handling but w/e
   }
 
-  // Find the decomposition of the geometry
-  // I.e. the set of cells intersected by the geometry
-  uint32_t lb = 3512928098;
-  uint32_t ub = 3512928105;
-  ranges->push_back(lb);
-  ranges->push_back(ub);
+  // GET corner coordinates
+  double ll_lon = 10.3890752;
+  double ll_lat = 63.4166715;
+  double ur_lon = 10.3919076;
+  double ur_lat = 63.4231043;
+
+  // // Find the decomposition of the geometry
+  // // I.e. the set of cells intersected by the geometry
+  ranges = qw_decomposition(ll_lon, ll_lat, ur_lon, ur_lat);
 
   return false;
 }
