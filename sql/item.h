@@ -503,9 +503,9 @@ struct Check_function_as_value_generator_parameters {
   int get_unnamed_function_error_code() const {
     return ((source == VGS_GENERATED_COLUMN)
                 ? ER_GENERATED_COLUMN_FUNCTION_IS_NOT_ALLOWED
-                : (source == VGS_DEFAULT_EXPRESSION)
-                      ? ER_DEFAULT_VAL_GENERATED_FUNCTION_IS_NOT_ALLOWED
-                      : ER_CHECK_CONSTRAINT_FUNCTION_IS_NOT_ALLOWED);
+            : (source == VGS_DEFAULT_EXPRESSION)
+                ? ER_DEFAULT_VAL_GENERATED_FUNCTION_IS_NOT_ALLOWED
+                : ER_CHECK_CONSTRAINT_FUNCTION_IS_NOT_ALLOWED);
   }
 };
 /*
@@ -857,7 +857,8 @@ class Item : public Parse_tree_node {
   };
 
   enum Bool_test  ///< Modifier for result transformation
-  { BOOL_IS_TRUE = 0x00,
+  {
+    BOOL_IS_TRUE = 0x00,
     BOOL_IS_FALSE = 0x01,
     BOOL_IS_UNKNOWN = 0x02,
     BOOL_NOT_TRUE = 0x03,
@@ -1154,12 +1155,11 @@ class Item : public Parse_tree_node {
      */
     if (data_type() != MYSQL_TYPE_INVALID && !(pin && type() == PARAM_ITEM))
       return false;
-    if (propagate_type(thd,
-                       (def == MYSQL_TYPE_VARCHAR)
-                           ? Type_properties(def, Item::default_charset())
-                           : (def == MYSQL_TYPE_JSON)
-                                 ? Type_properties(def, &my_charset_utf8mb4_bin)
-                                 : Type_properties(def)))
+    if (propagate_type(thd, (def == MYSQL_TYPE_VARCHAR)
+                                ? Type_properties(def, Item::default_charset())
+                            : (def == MYSQL_TYPE_JSON)
+                                ? Type_properties(def, &my_charset_utf8mb4_bin)
+                                : Type_properties(def)))
       return true;
     if (pin) pin_data_type();
     if (inherit) set_data_type_inherited();
@@ -3206,7 +3206,8 @@ class Item : public Parse_tree_node {
   */
   uint32 max_length;  ///< Maximum length, in bytes
   enum item_marker    ///< Values for member 'marker'
-  { MARKER_NONE = 0,
+  {
+    MARKER_NONE = 0,
     /// When contextualization or itemization adds an implicit comparison '0<>'
     /// (see make_condition()), to record that this Item_func_ne was created for
     /// this purpose; this value is tested during resolution.
@@ -3227,7 +3228,8 @@ class Item : public Parse_tree_node {
     MARKER_COND_DERIVED_TABLE = 7,
     /// When pushing index conditions: it says whether a condition uses only
     /// indexed columns.
-    MARKER_ICP_COND_USES_INDEX_ONLY = 10 };
+    MARKER_ICP_COND_USES_INDEX_ONLY = 10
+  };
   /**
     This member has several successive meanings, depending on the phase we're
     in (@see item_marker).
@@ -4644,13 +4646,6 @@ class Item_int : public Item_num {
     set_data_type(MYSQL_TYPE_LONGLONG);
     max_length = length;
     fixed = true;
-  }
-  Item_int(uint32 i, uint length = MY_INT32_NUM_DECIMAL_DIGITS)
-    : value((longlong)i) {
-  set_data_type(MYSQL_TYPE_LONGLONG);
-  max_length = length;
-  fixed = true;
-  unsigned_flag = true;
   }
   Item_int(const POS &pos, int32 i, uint length = MY_INT32_NUM_DECIMAL_DIGITS)
       : super(pos), value((longlong)i) {

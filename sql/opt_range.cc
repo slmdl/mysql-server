@@ -15044,9 +15044,9 @@ void QUICK_SKIP_SCAN_SELECT::dbug_dump(int indent, bool verbose) {
 static SEL_TREE *get_func_mm_tree_from_z_contains(RANGE_OPT_PARAM *param,
                                                   Item_func *cond_func) {
   // Decompose query geometry into set of cells (z-values)
-  std::vector<uint32_t> ranges;
+  std::vector<uint_fast32_t> ranges;
   Item_func_z_contains *tmp = (Item_func_z_contains *)cond_func;
-  if (tmp->decompose_containing_geom(&ranges)) return nullptr;
+  if (tmp->decompose_containing_geom(ranges)) return nullptr;
 
   // Find the field of the z column to pass into get_mm_parts
   Item *z_column = tmp->get_arg(2);
@@ -15058,8 +15058,8 @@ static SEL_TREE *get_func_mm_tree_from_z_contains(RANGE_OPT_PARAM *param,
   SEL_TREE *between = nullptr;
   SEL_TREE *tree = &null_sel_tree;
   for (uint i = 0; i < ranges.size(); i += 2) {
-    Item *lb = new Item_int(ranges[i]);
-    Item *ub = new Item_int(ranges[i + 1]);
+    Item *lb = new Item_int((ulonglong)ranges[i]);
+    Item *ub = new Item_int((ulonglong)ranges[i + 1]);
     lower_bound = get_mm_parts(param, cond_func, field, Item_func::GE_FUNC, lb);
     upper_bound = get_mm_parts(param, cond_func, field, Item_func::LE_FUNC, ub);
     between = tree_and(param, lower_bound, upper_bound);
