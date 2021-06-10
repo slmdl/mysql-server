@@ -5,7 +5,7 @@
 
 namespace zorder {
 // NB, modifies lower or upper.
-char get_bit(const double &c, double &lower, double &upper) {
+char get_bit(const double c, double &lower, double &upper) {
   char res;
   double middle = (lower + upper) / 2;
 
@@ -20,7 +20,7 @@ char get_bit(const double &c, double &lower, double &upper) {
   return res;
 }
 
-uint_fast32_t zvalue_from_coordinates(const double &lon, const double &lat) {
+uint_fast32_t zvalue_from_coordinates(const double lon, const double lat) {
   constexpr int fidelity = 32;
   std::string zstring = "";
   double lat_lower = -90;
@@ -37,7 +37,7 @@ uint_fast32_t zvalue_from_coordinates(const double &lon, const double &lat) {
   return z;
 }
 
-void coordinates_from_zvalue(const uint_fast32_t &zvalue, double &out_lon,
+void coordinates_from_zvalue(const uint_fast32_t zvalue, double &out_lon,
                              double &out_lat) {
   std::string zstring = std::bitset<32>(zvalue).to_string();
   double lat_lower = -90;
@@ -46,7 +46,7 @@ void coordinates_from_zvalue(const uint_fast32_t &zvalue, double &out_lon,
   double lon_upper = 180;
   constexpr char one = '1';
 
-  for (int i = 0; i < zstring.size(); i += 2) {
+  for (uint i = 0; i < zstring.size(); i += 2) {
     if (zstring[i] == one) {
       lon_lower = (lon_lower + lon_upper) / 2;
     } else {
@@ -64,7 +64,7 @@ void coordinates_from_zvalue(const uint_fast32_t &zvalue, double &out_lon,
   out_lat = (lat_lower + lat_upper) / 2;
 }
 
-uint_fast32_t neighbor_north(const uint_fast32_t &zvalue) {
+uint_fast32_t neighbor_north(const uint_fast32_t zvalue) {
   // NB, adds to the opposite coordinate to accomodate the different
   // rotation of the grid (z vs n shaped curve).
   uint_fast16_t lon;
@@ -72,7 +72,7 @@ uint_fast32_t neighbor_north(const uint_fast32_t &zvalue) {
   libmorton::morton2D_32_decode(zvalue, lon, lat);
   return libmorton::morton2D_32_encode(lon + 1, lat);
 }
-uint_fast32_t neighbor_east(const uint_fast32_t &zvalue) {
+uint_fast32_t neighbor_east(const uint_fast32_t zvalue) {
   // NB, adds to the opposite coordinate to accomodate the different
   // rotation of the grid (z vs n shaped curve).
   uint_fast16_t lon;
@@ -80,7 +80,7 @@ uint_fast32_t neighbor_east(const uint_fast32_t &zvalue) {
   libmorton::morton2D_32_decode(zvalue, lon, lat);
   return libmorton::morton2D_32_encode(lon, lat + 1);
 }
-uint_fast32_t neighbor_south(const uint_fast32_t &zvalue) {
+uint_fast32_t neighbor_south(const uint_fast32_t zvalue) {
   // NB, subtracts from the opposite coordinate to accomodate the different
   // rotation of the grid (z vs n shaped curve).
   uint_fast16_t lon;
@@ -88,7 +88,7 @@ uint_fast32_t neighbor_south(const uint_fast32_t &zvalue) {
   libmorton::morton2D_32_decode(zvalue, lon, lat);
   return libmorton::morton2D_32_encode(lon - 1, lat);
 }
-uint_fast32_t neighbor_west(const uint_fast32_t &zvalue) {
+uint_fast32_t neighbor_west(const uint_fast32_t zvalue) {
   // NB, subtracts from the opposite coordinate to accomodate the different
   // rotation of the grid (z vs n shaped curve).
   uint_fast16_t lon;
@@ -97,10 +97,10 @@ uint_fast32_t neighbor_west(const uint_fast32_t &zvalue) {
   return libmorton::morton2D_32_encode(lon, lat - 1);
 }
 
-std::vector<uint_fast32_t> qw_decomposition(const double &ll_lon,
-                                            const double &ll_lat,
-                                            const double &ur_lon,
-                                            const double &ur_lat) {
+std::vector<uint_fast32_t> qw_decomposition(const double ll_lon,
+                                            const double ll_lat,
+                                            const double ur_lon,
+                                            const double ur_lat) {
   std::vector<uint_fast32_t> result;
 
   uint_fast32_t lower_left = zorder::zvalue_from_coordinates(ll_lon, ll_lat);

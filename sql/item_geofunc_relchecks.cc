@@ -44,6 +44,7 @@
 #include "sql/gis/relops.h"
 #include "sql/gis/srid.h"
 #include "sql/gis/wkb.h"
+#include "sql/gis/z_utils.h"
 #include "sql/item.h"
 #include "sql/item_cmpfunc.h"
 #include "sql/item_func.h"
@@ -1304,6 +1305,8 @@ bool Item_func_z_contains::decompose_containing_geom(
     return true;  // Should do some proper error handling but w/e
   }
 
+  // GET COORDINATES FROM GEOMETRY
+
   // GET corner coordinates
   double ll_lon = 10.3890752;
   double ll_lat = 63.4166715;
@@ -1312,7 +1315,7 @@ bool Item_func_z_contains::decompose_containing_geom(
 
   // // Find the decomposition of the geometry
   // // I.e. the set of cells intersected by the geometry
-  ranges = qw_decomposition(ll_lon, ll_lat, ur_lon, ur_lat);
+  ranges = zorder::qw_decomposition(ll_lon, ll_lat, ur_lon, ur_lat);
 
   return false;
 }
