@@ -15046,7 +15046,7 @@ static SEL_TREE *get_func_mm_tree_from_z_contains(RANGE_OPT_PARAM *param,
   // Decompose query geometry into set of cells (z-values)
   std::vector<uint_fast32_t> ranges;
   Item_func_z_contains *tmp = (Item_func_z_contains *)cond_func;
-  if (tmp->decompose_containing_geom(ranges)) return nullptr;
+  if (tmp->decompose_containing_window(ranges)) return nullptr;
 
   // Find the field of the z column to pass into get_mm_parts
   Item *z_column = tmp->get_arg(2);

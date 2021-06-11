@@ -44,7 +44,6 @@
 #include "sql/gis/relops.h"
 #include "sql/gis/srid.h"
 #include "sql/gis/wkb.h"
-#include "sql/gis/z_utils.h"
 #include "sql/item.h"
 #include "sql/item_cmpfunc.h"
 #include "sql/item_func.h"
@@ -58,6 +57,8 @@
 #include "sql/srs_fetcher.h"
 #include "sql_string.h"
 
+#include "sql/gis/box.h"
+#include "sql/gis/mbr_utils.h"
 #include "sql/gis/z_utils.h"
 
 namespace boost {
@@ -1290,7 +1291,7 @@ bool Item_func_z_contains::eval(const dd::Spatial_reference_system *srs,
   return gis::within(srs, g2, g1, func_name(), result, null);
 }
 
-bool Item_func_z_contains::decompose_containing_geom(
+bool Item_func_z_contains::decompose_containing_window(
     std::vector<uint_fast32_t> &ranges) {
   // Parse the geometry into a usable format
   String buf;
@@ -1305,17 +1306,18 @@ bool Item_func_z_contains::decompose_containing_geom(
     return true;  // Should do some proper error handling but w/e
   }
 
-  // GET COORDINATES FROM GEOMETRY
+  // Find MBR of polygon to adjust for geodesic lines between corner points
+  gis::Geographic_box box;
+  gis::box_envelope(geometry.get(), srs, &box);
+  double lon_lower = srs->from_radians(box.min_corner().x());
+  double lat_lower = srs->from_radians(box.min_corner().y());
+  double lon_upper = srs->from_radians(box.max_corner().x());
+  double lat_upper = srs->from_radians(box.max_corner().y());
 
-  // GET corner coordinates
-  double ll_lon = 10.3890752;
-  double ll_lat = 63.4166715;
-  double ur_lon = 10.3919076;
-  double ur_lat = 63.4231043;
-
-  // // Find the decomposition of the geometry
-  // // I.e. the set of cells intersected by the geometry
-  ranges = zorder::qw_decomposition(ll_lon, ll_lat, ur_lon, ur_lat);
+  uint_fast32_t ll = zorder::zvalue_from_coordinates(lon_lower, lat_lower);
+  uint_fast32_t ur = zorder::zvalue_from_coordinates(lon_upper, lat_upper);
+  ranges.push_back(ll);
+  ranges.push_back(ur);
 
   return false;
 }

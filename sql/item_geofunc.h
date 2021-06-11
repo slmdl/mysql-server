@@ -1273,7 +1273,7 @@ class Item_func_z_contains final : public Item_func_spatial_relation {
   const char *func_name() const override { return "z_contains"; }
   bool eval(const dd::Spatial_reference_system *srs, const gis::Geometry *g1,
             const gis::Geometry *g2, bool *result, bool *null) override;
-  bool decompose_containing_geom(std::vector<uint_fast32_t> &ranges);
+  bool decompose_containing_window(std::vector<uint_fast32_t> &ranges);
 };
 
 /**
