@@ -57,6 +57,10 @@
 #include "sql/srs_fetcher.h"
 #include "sql_string.h"
 
+#include <bitset>
+#include "sql/gis/box.h"
+#include "sql/gis/mbr_utils.h"
+
 namespace boost {
 namespace geometry {
 namespace cs {
@@ -1287,6 +1291,40 @@ bool Item_func_z_contains::eval(const dd::Spatial_reference_system *srs,
   return gis::within(srs, g2, g1, func_name(), result, null);
 }
 
+// Calculate the value of the bit, and modify the corresponding bound
+char get_bit(const double c, double &lower_bound, double &upper_bound) {
+  char res;
+  double middle = (lower_bound + upper_bound) / 2;
+
+  if (c < middle) {
+    res = '0';
+    upper_bound = middle;
+  } else {
+    res = '1';
+    lower_bound = middle;
+  }
+
+  return res;
+}
+
+uint32_t zvalue_from_coordinates(const double lon, const double lat) {
+  constexpr int fidelity = 32;
+  std::string zstring = "";
+  double lat_lower = -90;
+  double lat_upper = 90;
+  double lon_lower = -180;
+  double lon_upper = 180;
+
+  for (int i = 0; i < fidelity; i += 2) {
+    zstring.push_back(get_bit(lon, lon_lower, lon_upper));
+    zstring.push_back(get_bit(lat, lat_lower, lat_upper));
+  }
+
+  // Interpret the string as an unsigned integer
+  uint32_t z = std::bitset<32>(zstring).to_ulong();
+  return z;
+}
+
 bool Item_func_z_contains::decompose_containing_geom(
     std::vector<uint32_t> *ranges) {
   // Parse the geometry into a usable format
@@ -1302,12 +1340,21 @@ bool Item_func_z_contains::decompose_containing_geom(
     return true;  // Should do some proper error handling but w/e
   }
 
-  // Find the decomposition of the geometry
-  // I.e. the set of cells intersected by the geometry
-  uint32_t lb = 3512928098;
-  uint32_t ub = 3512928105;
-  ranges->push_back(lb);
-  ranges->push_back(ub);
+  // Find MBR of polygon to adjust for geodesic lines between corner points
+  gis::Geographic_box box;
+  gis::box_envelope(geometry.get(), srs, &box);
+
+  // Find boundaries
+  double lon_lower = srs->from_radians(box.min_corner().x());
+  double lat_lower = srs->from_radians(box.min_corner().y());
+  double lon_upper = srs->from_radians(box.max_corner().x());
+  double lat_upper = srs->from_radians(box.max_corner().y());
+
+  // Find Z-values of lower left and upper right corners and add as range
+  uint32_t ll = zvalue_from_coordinates(lon_lower, lat_lower);
+  uint32_t ur = zvalue_from_coordinates(lon_upper, lat_upper);
+  ranges->push_back(ll);
+  ranges->push_back(ur);
 
   return false;
 }
