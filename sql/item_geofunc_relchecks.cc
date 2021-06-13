@@ -58,6 +58,7 @@
 #include "sql_string.h"
 
 #include <bitset>
+#include <boost/geometry.hpp>
 #include "sql/gis/box.h"
 #include "sql/gis/mbr_utils.h"
 
@@ -1340,9 +1341,10 @@ bool Item_func_z_contains::decompose_containing_geom(
     return true;  // Should do some proper error handling but w/e
   }
 
-  // Find MBR of polygon to adjust for geodesic lines between corner points
+  // // Find MBR of polygon to adjust for geodesic lines between corner points
   gis::Geographic_box box;
-  gis::box_envelope(geometry.get(), srs, &box);
+  // gis::box_envelope(geometry.get(), srs, &box);
+  gis::box_envelope(geometry.get(), nullptr, &box);  // When not adjusting
 
   // Find boundaries
   double lon_lower = srs->from_radians(box.min_corner().x());
