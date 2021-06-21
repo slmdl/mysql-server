@@ -15058,8 +15058,8 @@ static SEL_TREE *get_func_mm_tree_from_z_contains(RANGE_OPT_PARAM *param,
   SEL_TREE *between = nullptr;
   SEL_TREE *tree = &null_sel_tree;
   for (uint i = 0; i < ranges.size(); i += 2) {
-    Item *lb = new Item_int(ranges[i]);
-    Item *ub = new Item_int(ranges[i + 1]);
+    Item *lb = new (param->mem_root) Item_int(ranges[i]);
+    Item *ub = new (param->mem_root) Item_int(ranges[i + 1]);
     lower_bound = get_mm_parts(param, cond_func, field, Item_func::GE_FUNC, lb);
     upper_bound = get_mm_parts(param, cond_func, field, Item_func::LE_FUNC, ub);
     between = tree_and(param, lower_bound, upper_bound);
