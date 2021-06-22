@@ -1343,8 +1343,8 @@ bool Item_func_z_contains::decompose_containing_geom(
 
   // // Find MBR of polygon to adjust for geodesic lines between corner points
   gis::Geographic_box box;
-  // gis::box_envelope(geometry.get(), srs, &box);
-  gis::box_envelope(geometry.get(), nullptr, &box);  // When not adjusting
+  gis::box_envelope(geometry.get(), srs, &box);
+  // gis::box_envelope(geometry.get(), nullptr, &box);  // When not adjusting
 
   // Find boundaries
   double lon_lower = srs->from_radians(box.min_corner().x());
